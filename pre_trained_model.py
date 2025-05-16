@@ -101,9 +101,9 @@ def train_and_save():
         acc = accuracy_score(y_test, y_pred)
         print(f"✅ {name} - Accuracy: {acc:.4f}, Best Params: {grid.best_params_}")
 
-        # Save model
+        # Save model with compression
         filename = f"saved_models/{name.replace(' ', '_').lower()}.pkl"
-        joblib.dump(best_model, filename)
+        joblib.dump(best_model, filename, compress=9)
 
         trained_models[name] = best_model
         model_scores[name] = acc
@@ -117,12 +117,12 @@ def train_and_save():
     ensemble.fit(X_train, y_train)
     ensemble_acc = accuracy_score(y_test, ensemble.predict(X_test))
     model_scores["Voting Ensemble"] = ensemble_acc
-    joblib.dump(ensemble, "saved_models/ensemble.pkl")
+    joblib.dump(ensemble, "saved_models/ensemble.pkl", compress=9)
 
-    # Save encoders/scaler and scores
-    joblib.dump(le, "saved_models/label_encoder.pkl")
-    joblib.dump(scaler, "saved_models/scaler.pkl")
-    joblib.dump(model_scores, "saved_models/model_scores.pkl")
+    # Save encoders/scaler and scores with compression
+    joblib.dump(le, "saved_models/label_encoder.pkl", compress=9)
+    joblib.dump(scaler, "saved_models/scaler.pkl", compress=9)
+    joblib.dump(model_scores, "saved_models/model_scores.pkl", compress=9)
 
     print("\n🎉 All models trained and saved successfully!")
     print("📁 Models saved in 'saved_models/' directory.")
