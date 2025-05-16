@@ -52,12 +52,14 @@ ax.set_title(f"Temperature Over Time - {city}")
 ax.set_xlabel("Date")
 ax.set_ylabel("Temperature (K)")
 st.pyplot(fig)
+plt.close(fig)
 
 # Humidity vs Temp
 st.subheader("☁️ Humidity vs Temperature")
 fig2, ax2 = plt.subplots()
 sns.scatterplot(x="temperature", y="humidity", data=df_final, ax=ax2)
 st.pyplot(fig2)
+plt.close(fig2)
 
 # Box Plots
 st.subheader("📊 Box Plots for Outlier Detection")
@@ -68,30 +70,35 @@ for i, col in enumerate(numeric_cols):
     sns.boxplot(x=df_final[col], ax=axs[i], color='skyblue')
     axs[i].set_title(f'Box Plot of {col}')
 st.pyplot(fig3)
+plt.close(fig3)
 
 # Avg temp by city
 st.subheader("🌡️ Average Temperature by City")
 fig4, ax4 = plt.subplots()
 df_final.groupby("city")["temperature"].mean().sort_values().plot(kind='barh', ax=ax4)
 st.pyplot(fig4)
+plt.close(fig4)
 
 # Weather condition frequency
 st.subheader("🌤️ Weather Condition Frequency")
 fig5, ax5 = plt.subplots()
 df_final["weather"].value_counts().plot(kind="bar", ax=ax5)
 st.pyplot(fig5)
+plt.close(fig5)
 
 # Wind speed distribution
 st.subheader("🍃 Wind Speed Distribution")
 fig6, ax6 = plt.subplots()
 sns.histplot(df_final["wind_speed"], bins=10, kde=True, ax=ax6)
 st.pyplot(fig6)
+plt.close(fig6)
 
 # Correlation heatmap
 st.subheader("📉 Correlation Heatmap")
 fig7, ax7 = plt.subplots()
 sns.heatmap(df_final[numeric_cols].corr(), annot=True, cmap="coolwarm", ax=ax7)
 st.pyplot(fig7)
+plt.close(fig7)
 
 # Random Forest classifier
 st.subheader("🤖 Weather Classification Accuracy")
