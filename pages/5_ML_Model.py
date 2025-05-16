@@ -1,16 +1,15 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import os
-from main import load_and_prepare_data
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+from main import load_and_prepare_data
 
 @st.cache_data
 def load_data():
@@ -21,13 +20,16 @@ def load_data():
         df.to_csv("processed_climate_data.csv")
     return df
 
-# Load and filter data
+# Load data
 df = load_data()
+
 st.sidebar.header("🔧 Global Filters")
 selected_year = st.sidebar.selectbox("Select Year", sorted(df["year"].unique()), key="year")
 selected_theme = st.sidebar.selectbox("Select Theme", ["Blues", "Viridis", "Plasma", "Inferno"], key="theme")
 selected_city = st.sidebar.selectbox("Select City", sorted(df["city"].unique()), key="city")
-selected_model = st.sidebar.selectbox("Choose Model", ["Random Forest", "Decision Tree", "Logistic Regression", "Gradient Boosting", "Voting Ensemble"])
+selected_model = st.sidebar.selectbox("Choose Model", [
+    "Random Forest", "Decision Tree", "Logistic Regression", "Gradient Boosting", "Voting Ensemble"
+])
 
 df_year = df[df["year"] == selected_year].copy()
 
@@ -51,28 +53,26 @@ models = {
     "Gradient Boosting": GradientBoostingClassifier(n_estimators=100, random_state=42),
 }
 
-# Train and predict
+# Use voting ensemble if selected
 if selected_model == "Voting Ensemble":
-    voting_clf = VotingClassifier(estimators=[
+    clf = VotingClassifier(estimators=[
         ('rf', models["Random Forest"]),
         ('dt', models["Decision Tree"]),
         ('lr', models["Logistic Regression"]),
         ('gb', models["Gradient Boosting"])
     ], voting='soft')
-    model = voting_clf
 else:
-    model = models[selected_model]
+    clf = models[selected_model]
 
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-# Accuracy
+# Train model
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
 acc = accuracy_score(y_test, y_pred)
 st.metric("Model Accuracy", f"{acc:.2%}")
 
-# Feature importance (only for tree-based models)
-if hasattr(model, "feature_importances_"):
-    feat_importances = pd.Series(model.feature_importances_, index=numeric_cols).sort_values(ascending=False)
+# Feature importance only for tree-based models
+if hasattr(clf, "feature_importances_"):
+    feat_importances = pd.Series(clf.feature_importances_, index=numeric_cols).sort_values(ascending=False)
     st.subheader("Feature Importance")
     fig, ax = plt.subplots()
     sns.barplot(x=feat_importances.values, y=feat_importances.index, color='mediumseagreen', ax=ax)
@@ -81,20 +81,20 @@ if hasattr(model, "feature_importances_"):
     st.pyplot(fig)
     plt.close(fig)
 
-# Confusion matrix
+# Confusion matrix (safe for all classifiers)
 if st.checkbox("Show Confusion Matrix"):
+    st.subheader("Confusion Matrix")
     cm = confusion_matrix(y_test, y_pred)
-    fig2, ax2 = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", xticklabels=le.classes_, yticklabels=le.classes_, ax=ax2)
-    ax2.set_title("Confusion Matrix")
-    ax2.set_xlabel("Predicted")
-    ax2.set_ylabel("Actual")
-    st.pyplot(fig2)
-    plt.close(fig2)
+    fig_cm, ax_cm = plt.subplots()
+    sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", xticklabels=le.classes_, yticklabels=le.classes_, ax=ax_cm)
+    ax_cm.set_xlabel("Predicted")
+    ax_cm.set_ylabel("Actual")
+    st.pyplot(fig_cm)
+    plt.close(fig_cm)
 
-# Classification report
-if st.checkbox("Show Classification Report"):
-    st.subheader("Classification Report")
+# Classification report - trimmed
+if st.checkbox("Show Classification Report (Summary Only)"):
     report = classification_report(y_test, y_pred, target_names=le.classes_, output_dict=True)
     df_report = pd.DataFrame(report).transpose()
-    st.dataframe(df_report)
+    df_summary = df_report.loc[["macro avg", "weighted avg"]]
+    st.dataframe(df_summary)
