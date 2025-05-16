@@ -1,20 +1,15 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 import os
 import time
+import joblib
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from main import load_and_prepare_data
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import (
-    RandomForestClassifier,
-    VotingClassifier,
-    GradientBoostingClassifier,
-    ExtraTreesClassifier
-)
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
@@ -28,80 +23,88 @@ def load_data():
         df.to_csv("processed_climate_data.csv")
     return df
 
+def feature_engineering(df):
+    df = df.copy()
+    df["temp_c"] = df["temperature"] - 273.15
+    df["wind_cat"] = pd.cut(df["wind_speed"], bins=[0,3,7,15,50], labels=["calm","breeze","windy","storm"])
+    df.dropna(inplace=True)
+    return df
+
 @st.cache_resource
-def train_fast_ensemble():
+def train_and_cache_models():
     df = load_data()
+    df = feature_engineering(df)
     df_year = df[df["year"] == df["year"].max()].copy()
-    df_sample = df_year.sample(frac=0.3, random_state=42)
+
+    # Stratified sample to keep class balance
+    df_sample = df_year.groupby("weather").apply(lambda x: x.sample(frac=0.3, random_state=42)).reset_index(drop=True)
 
     le = LabelEncoder()
     df_sample["weather_encoded"] = le.fit_transform(df_sample["weather"])
-    X = df_sample[["temperature", "humidity", "pressure", "wind_speed"]]
-    y = df_sample["weather_encoded"]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    df_sample["wind_cat_enc"] = LabelEncoder().fit_transform(df_sample["wind_cat"])
 
-    models = {
-        "Random Forest": RandomForestClassifier(n_estimators=150, max_depth=10, random_state=42),
-        "Gradient Boosting": GradientBoostingClassifier(n_estimators=120, learning_rate=0.1, max_depth=4, random_state=42),
-        "Logistic Regression": LogisticRegression(max_iter=500, C=1.0, random_state=42),
-        "Decision Tree": DecisionTreeClassifier(max_depth=6, random_state=42),
-        "Extra Trees": ExtraTreesClassifier(n_estimators=100, max_depth=10, random_state=42)
+    features = ["temp_c", "humidity", "pressure", "wind_cat_enc"]
+    X = df_sample[features]
+    y = df_sample["weather_encoded"]
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+    rf = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
+    gb = GradientBoostingClassifier(n_estimators=100, learning_rate=0.05, max_depth=4, random_state=42)
+    lr = LogisticRegression(max_iter=500, C=1.0, random_state=42)
+
+    for model, name in zip([rf, gb, lr], ["rf", "gb", "lr"]):
+        model.fit(X_train, y_train)
+        joblib.dump(model, f"models/{name}.pkl")
+
+    ensemble = VotingClassifier(estimators=[("rf", rf), ("gb", gb), ("lr", lr)], voting='soft')
+    ensemble.fit(X_train, y_train)
+    joblib.dump(ensemble, "models/voting.pkl")
+
+    return {
+        "rf": rf, "gb": gb, "lr": lr, "voting": ensemble,
+        "le": le, "scaler": scaler, "features": features,
+        "X_test": X_test, "y_test": y_test
     }
 
-    model_results = []
-    trained_models = {}
+os.makedirs("models", exist_ok=True)
 
-    for name, model in models.items():
-        start = time.time()
-        try:
-            model.fit(X_train, y_train)
-            acc = accuracy_score(y_test, model.predict(X_test))
-            duration = round(time.time() - start, 2)
-            trained_models[name] = model
-            model_results.append({"Model": name, "Accuracy": acc, "Train Time (s)": duration})
-        except Exception:
-            model_results.append({"Model": name, "Accuracy": 0.0, "Train Time (s)": 0})
+with st.spinner("Training models with feature engineering and caching..."):
+    result = train_and_cache_models()
 
-    voting_clf = VotingClassifier(estimators=[(k, v) for k, v in trained_models.items()], voting='soft')
-    voting_clf.fit(X_train, y_train)
-    ensemble_acc = accuracy_score(y_test, voting_clf.predict(X_test))
+st.title("📊 Final Optimized ML Ensemble")
 
-    return trained_models, voting_clf, model_results, le, X.columns.tolist(), X_test, y_test
+accs = {
+    name: accuracy_score(result["y_test"], result[name].predict(result["X_test"]))
+    for name in ["rf", "gb", "lr"]
+}
+accs["Voting Ensemble"] = accuracy_score(result["y_test"], result["voting"].predict(result["X_test"]))
 
-# Train models in background
-with st.spinner("⏳ Training optimized models..."):
-    trained_models, voting_model, model_stats, label_encoder, feature_names, X_test, y_test = train_fast_ensemble()
-
-# Dashboard title
-st.title("🤖 Optimized Voting Ensemble Dashboard")
-
-# Model comparison
-st.subheader("📊 Model Performance Comparison")
-df_stats = pd.DataFrame(model_stats).sort_values(by="Accuracy", ascending=False)
+st.subheader("Model Accuracies")
+df_acc = pd.DataFrame(list(accs.items()), columns=["Model", "Accuracy"]).sort_values("Accuracy", ascending=False)
 fig, ax = plt.subplots()
-sns.barplot(data=df_stats, x="Accuracy", y="Model", palette="crest", ax=ax)
-ax.set_title("Accuracy by Model")
+sns.barplot(data=df_acc, x="Accuracy", y="Model", ax=ax, palette="crest")
+ax.set_title("Accuracy Comparison")
 st.pyplot(fig)
-plt.close(fig)
 
-# Ensemble accuracy
-ensemble_acc = accuracy_score(y_test, voting_model.predict(X_test))
-st.metric("Voting Ensemble Accuracy", f"{ensemble_acc:.2%}")
-
-# Live prediction UI
-st.subheader("🔍 Predict Weather Using Ensemble")
-with st.form("live_prediction"):
-    col1, col2 = st.columns(2)
-    with col1:
-        temp = st.number_input("Temperature (K)", 200.0, 330.0, 290.0)
+st.subheader("🔍 Predict Weather with Final Ensemble")
+with st.form("live_form"):
+    c1, c2 = st.columns(2)
+    with c1:
+        temp_c = st.number_input("Temperature (°C)", -40.0, 60.0, 25.0)
         humidity = st.slider("Humidity (%)", 0, 100, 50)
-    with col2:
+    with c2:
         pressure = st.number_input("Pressure (hPa)", 900.0, 1100.0, 1013.0)
-        wind = st.slider("Wind Speed (m/s)", 0.0, 30.0, 5.0)
-    submitted = st.form_submit_button("Predict")
+        wind_cat = st.selectbox("Wind Category", ["calm", "breeze", "windy", "storm"])
+    predict_btn = st.form_submit_button("Predict")
 
-if submitted:
-    user_df = pd.DataFrame([[temp, humidity, pressure, wind]], columns=feature_names)
-    prediction = voting_model.predict(user_df)
-    label = label_encoder.inverse_transform(prediction)[0]
+if predict_btn:
+    wind_encoded = {"calm": 0, "breeze": 1, "windy": 2, "storm": 3}[wind_cat]
+    input_df = pd.DataFrame([[temp_c, humidity, pressure, wind_encoded]], columns=result["features"])
+    input_scaled = result["scaler"].transform(input_df)
+    pred = result["voting"].predict(input_scaled)
+    label = result["le"].inverse_transform(pred)[0]
     st.success(f"🌤️ Predicted Weather: **{label}**")
