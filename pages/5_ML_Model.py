@@ -25,7 +25,7 @@ selected_year = st.sidebar.selectbox("Select Year", sorted(df["year"].unique()),
 selected_theme = st.sidebar.selectbox("Select Theme", ["Blues", "Viridis", "Plasma", "Inferno"], key="theme")
 selected_city = st.sidebar.selectbox("Select City", sorted(df["city"].unique()), key="city")
 
-df_year = df[df["year"] == selected_year].copy()  # Fix SettingWithCopyWarning
+df_year = df[df["year"] == selected_year].copy()  # .copy() to avoid SettingWithCopyWarning
 
 st.title(f"🤖 Weather Classification Model - {selected_year}")
 
