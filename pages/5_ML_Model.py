@@ -1,4 +1,3 @@
-# pages/5_🤖_ML_Model.py
 import streamlit as st
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
@@ -26,7 +25,7 @@ selected_year = st.sidebar.selectbox("Select Year", sorted(df["year"].unique()),
 selected_theme = st.sidebar.selectbox("Select Theme", ["Blues", "Viridis", "Plasma", "Inferno"], key="theme")
 selected_city = st.sidebar.selectbox("Select City", sorted(df["city"].unique()), key="city")
 
-df_year = df[df["year"] == selected_year]
+df_year = df[df["year"] == selected_year].copy()  # Fix SettingWithCopyWarning
 
 st.title(f"🤖 Weather Classification Model - {selected_year}")
 
@@ -54,7 +53,7 @@ feat_importances = pd.Series(model.feature_importances_, index=numeric_cols).sor
 
 st.subheader("Feature Importance")
 fig, ax = plt.subplots()
-sns.barplot(x=feat_importances.values, y=feat_importances.index, palette="viridis", ax=ax)
+sns.barplot(x=feat_importances.values, y=feat_importances.index, color='mediumseagreen', ax=ax)
 ax.set_xlabel("Importance")
 ax.set_title("Feature Importance in Random Forest")
 st.pyplot(fig)

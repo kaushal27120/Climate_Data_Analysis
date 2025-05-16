@@ -1,4 +1,3 @@
-# pages/4_📦_Distributions.py
 import streamlit as st
 import pandas as pd
 import seaborn as sns
@@ -37,7 +36,7 @@ axs = axs.flatten()
 for i, col in enumerate(numeric_cols):
     sns.boxplot(x=df_city[col], ax=axs[i], color='skyblue')
     axs[i].set_title(f'{col.title()} Distribution')
-st.tight_layout()
+plt.tight_layout()
 st.pyplot(fig)
 plt.close(fig)
 
