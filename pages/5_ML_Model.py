@@ -63,11 +63,12 @@ run_compare = st.checkbox("Compare All Models")
 if run_compare:
     results = []
     for name, model in models.items():
-        start = time.time()
-        model.fit(X_train, y_train)
-        acc = accuracy_score(y_test, model.predict(X_test))
-        duration = round(time.time() - start, 2)
-        results.append({"Model": name, "Accuracy": acc, "Train Time (s)": duration})
+        with st.spinner(f"Training {name}..."):
+            start = time.time()
+            model.fit(X_train, y_train)
+            acc = accuracy_score(y_test, model.predict(X_test))
+            duration = round(time.time() - start, 2)
+            results.append({"Model": name, "Accuracy": acc, "Train Time (s)": duration})
     
     df_results = pd.DataFrame(results).sort_values(by="Accuracy", ascending=False)
     st.subheader("📊 Model Comparison")
@@ -81,11 +82,11 @@ if run_compare:
 
 else:
     clf = models[model_choice]
-    with st.spinner("Training model..."):
+    with st.spinner(f"Training {model_choice} model..."):
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
         acc = accuracy_score(y_test, y_pred)
-        st.metric("Model Accuracy", f"{acc:.2%}")
+    st.metric("Model Accuracy", f"{acc:.2%}")
 
     # Feature importance
     if hasattr(clf, "feature_importances_"):
@@ -119,7 +120,7 @@ else:
         st.pyplot(fig_cm)
         plt.close(fig_cm)
 
-    # 🔍 Live Prediction
+    # Live Prediction
     st.subheader("🔍 Live Weather Prediction")
     with st.form("prediction_form"):
         col1, col2 = st.columns(2)
