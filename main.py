@@ -4,7 +4,6 @@ from functools import reduce
 import os
 
 def load_and_prepare_data(folder_path="historical-hourly-weather-dataset"):
-    # Load CSVs
     files = {
         "humidity": "humidity.csv",
         "pressure": "pressure.csv",
@@ -15,13 +14,24 @@ def load_and_prepare_data(folder_path="historical-hourly-weather-dataset"):
     }
 
     dfs = {}
+    missing_files = []
+
+    # Load and melt CSVs
     for key, filename in files.items():
-        df = pd.read_csv(os.path.join(folder_path, filename))
-        dfs[key] = df.melt(id_vars=["datetime"], var_name="city", value_name=key)
+        file_path = os.path.join(folder_path, filename)
+        if os.path.exists(file_path):
+            df = pd.read_csv(file_path)
+            dfs[key] = df.melt(id_vars=["datetime"], var_name="city", value_name=key)
+        else:
+            missing_files.append(filename)
+
+    # Handle missing files
+    if missing_files:
+        raise FileNotFoundError(f"Missing files: {', '.join(missing_files)}")
 
     # Merge all dataframes
     df_final = reduce(lambda left, right: pd.merge(left, right, on=["datetime", "city"], how="outer"), dfs.values())
-    
+
     # Clean and transform
     df_final.dropna(inplace=True)
     df_final["datetime"] = pd.to_datetime(df_final["datetime"])
@@ -31,7 +41,12 @@ def load_and_prepare_data(folder_path="historical-hourly-weather-dataset"):
 
     return df_final
 
-# Save for Streamlit use
+# Script mode: save output CSV
 if __name__ == "__main__":
-    df = load_and_prepare_data()
-    df.to_csv("processed_climate_data.csv")
+    try:
+        df = load_and_prepare_data()
+        df.to_csv("processed_climate_data.csv")
+        print("✅ processed_climate_data.csv generated successfully.")
+    except Exception as e:
+        print("❌ Error while generating processed dataset:")
+        print(e)
