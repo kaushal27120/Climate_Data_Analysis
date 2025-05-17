@@ -1,62 +1,71 @@
+# app.py (entry point)
 import streamlit as st
+from datetime import datetime
 
-# Page settings
-st.set_page_config(page_title="🌦️ Climate Dashboard", layout="wide")
+# Page configuration
+st.set_page_config(
+    page_title="🌦️ Climate Dashboard",
+    page_icon="🌍",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Inject custom CSS
-st.markdown("""
+# Hide default Streamlit style elements for a cleaner UI
+hide_style = """
     <style>
-        body {
-            background: linear-gradient(to bottom right, #e0f7fa, #ffffff);
-        }
-        .main {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            animation: fadeIn 1.2s ease-in;
-        }
-        @keyframes fadeIn {
-            from {opacity: 0;}
-            to {opacity: 1;}
-        }
-        h1 {
-            color: #00796b;
-            font-weight: 700;
-        }
-        .footer {
-            margin-top: 100px;
-            padding-top: 20px;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            color: #666;
-            font-size: 0.95rem;
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
         }
     </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(hide_style, unsafe_allow_html=True)
 
-# Main title
-st.markdown("<h1>🌦️ Climate Data Dashboard</h1>", unsafe_allow_html=True)
+# Header
+st.markdown("<h1 style='text-align: center; color: #1f77b4;'>🌦️ Climate Data Dashboard</h1>", unsafe_allow_html=True)
 
-# Welcome content
+# Subtitle
+st.markdown(
+    "<h4 style='text-align: center; color: gray;'>Explore global and city-specific weather trends, patterns, and ML-powered insights</h4>",
+    unsafe_allow_html=True
+)
+
+# Divider
+st.markdown("---")
+
+# Sidebar setup
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/1116/1116453.png", width=80)
+    st.title("🔧 Dashboard Controls")
+    
+    st.subheader("📅 Select Year")
+    selected_year = st.slider("Year", 2000, datetime.now().year, 2022)
+    
+    st.subheader("🏙️ Select City")
+    city = st.selectbox("City", ["New York", "London", "Tokyo", "Sydney", "Mumbai"])
+    
+    st.subheader("🎨 Theme")
+    theme = st.radio("Choose Theme", ["Light", "Dark", "Auto"], horizontal=True)
+
+    st.markdown("---")
+    st.markdown("Made with ❤️ by [Your Name]")
+
+# Main content
 st.markdown("""
-<div class="main">
-    <p>Welcome to the <strong>Climate Data Dashboard</strong>! 🌍</p>
+Welcome to the **Climate Data Dashboard**! 🌍  
+Dive into powerful analytics and insightful visualizations:
 
-    <p>Navigate using the sidebar to explore:</p>
-    <ul>
-        <li>🔍 Overall trends and KPIs</li>
-        <li>📈 City-specific analysis</li>
-        <li>🗺️ Interactive map of climate data</li>
-        <li>📊 Distributions and weather patterns</li>
-        <li>🤖 Weather classification using machine learning</li>
-    </ul>
+- 🔍 **Overview**: Key performance indicators and summary stats  
+- 📈 **City Analysis**: Deep dive into weather patterns for selected cities  
+- 🗺️ **Map Explorer**: Interactive map view of climate data  
+- 📊 **Distributions**: Visual trends and statistical insights  
+- 🤖 **ML Models**: Weather classification powered by machine learning  
 
-    <p>Use the sidebar to select year, city, and theme across all pages.</p>
-</div>
-""", unsafe_allow_html=True)
+Use the sidebar to customize the experience. Happy exploring! 🌤️
+""")
 
-# Footer
-st.markdown("""
-<div class="footer">
-    <p><strong>This project is made by:</strong></p>
-    <p>1. Manish Rai &nbsp;&nbsp;&nbsp; 2. Kaushal Jashani &nbsp;&nbsp;&nbsp; 3. Darpan Madhvi</p>
-</div>
-""", unsafe_allow_html=True)
+# Optional footer or credits
+st.markdown("---")
+st.caption("© 2025 Climate Insights • Built with Streamlit | Manish Rai")
