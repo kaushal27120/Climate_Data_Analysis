@@ -1,4 +1,3 @@
-# pages/1_🌍_Overview.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -22,10 +21,15 @@ df = load_data()
 st.sidebar.header("🔧 Global Filters")
 years = sorted(df["year"].unique())
 cities = sorted(df["city"].unique())
-themes = ["Blues", "Viridis", "Plasma", "Inferno"]
+themes = {
+    "Blues": "Blues",
+    "Viridis": "viridis",
+    "Plasma": "plasma",
+    "Inferno": "inferno"
+}
 
 selected_year = st.sidebar.selectbox("Select Year", years, key="year")
-selected_theme = st.sidebar.selectbox("Select Theme", themes, key="theme")
+selected_theme = st.sidebar.selectbox("Select Theme", list(themes.keys()), key="theme")
 selected_city = st.sidebar.selectbox("Select City", cities, key="city")
 
 # Filtered data
@@ -43,16 +47,25 @@ col1.metric("🔥 Hottest City", hottest_city, f"{avg_temp.max():.2f} K")
 col2.metric("❄️ Coldest City", coldest_city, f"{avg_temp.min():.2f} K")
 col3.metric("🌆 Cities Tracked", df_year["city"].nunique())
 
-# Corrected Temp dial charts (filtered by selected city)
-high_temp_pct = (df_city[df_city["temperature"] > df_city["temperature"].quantile(0.75)].shape[0] / df_city.shape[0]) * 100
-low_temp_pct = (df_city[df_city["temperature"] < df_city["temperature"].quantile(0.25)].shape[0] / df_city.shape[0]) * 100
+# Calculate global quartiles from selected year
+q75 = df_year["temperature"].quantile(0.75)
+q25 = df_year["temperature"].quantile(0.25)
 
+# Apply thresholds to selected city
+high_temp_days = df_city[df_city["temperature"] > q75].shape[0]
+low_temp_days = df_city[df_city["temperature"] < q25].shape[0]
+total_days = df_city.shape[0]
+
+high_temp_pct = (high_temp_days / total_days) * 100 if total_days else 0
+low_temp_pct = (low_temp_days / total_days) * 100 if total_days else 0
+
+# Gauges
 col4, col5 = st.columns(2)
 with col4:
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=high_temp_pct,
-        title={'text': f"{selected_city} - High Temp Days %"},
+        title={'text': f"{selected_city} - High Temp Days (%)"},
         gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "green"}}
     ))
     st.plotly_chart(fig, use_container_width=True)
@@ -61,7 +74,7 @@ with col5:
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=low_temp_pct,
-        title={'text': f"{selected_city} - Low Temp Days %"},
+        title={'text': f"{selected_city} - Low Temp Days (%)"},
         gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "red"}}
     ))
     st.plotly_chart(fig, use_container_width=True)
@@ -95,7 +108,7 @@ fig_map = px.scatter_geo(
     lon="lon",
     text="city",
     color="temperature",
-    color_continuous_scale=selected_theme.lower(),
+    color_continuous_scale=themes[selected_theme],
     size="temperature",
     projection="natural earth",
     title=f"Avg Temperature per City - {selected_year}"
