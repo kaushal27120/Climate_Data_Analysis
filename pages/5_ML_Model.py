@@ -27,7 +27,7 @@ rf, gb, et, lr, dt, ensemble, le, scaler, model_scores, features = load_models()
 # Sidebar chart switch
 chart_type = st.sidebar.radio(
     "📈 Choose Accuracy Visualization",
-    ["Funnel Chart", "Radar Chart", "Bar Race Chart"]
+    ["Funnel Chart", "Radar Chart"]
 )
 
 st.title("🤖 Weather Prediction - Pretrained Ensemble")
