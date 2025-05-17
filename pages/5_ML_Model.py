@@ -75,7 +75,7 @@ model_map = {
 
 if st.button("Show Confusion Matrix"):
     # Load and prepare data again
-    df = joblib.load("processed_climate_data.csv")
+    df = pd.read_csv("processed_climate_data.csv", parse_dates=["datetime"], index_col="datetime")
     df["temp_c"] = df["temperature"] - 273.15
     df["wind_cat"] = pd.cut(df["wind_speed"], bins=[0,3,7,15,50], labels=["calm","breeze","windy","storm"])
     df["wind_cat_enc"] = joblib.load("saved_models/label_encoder.pkl").fit_transform(df["wind_cat"])
