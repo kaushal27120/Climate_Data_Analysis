@@ -20,7 +20,7 @@ df = load_data()
 # Sidebar selections
 st.sidebar.header("🔧 Global Filters")
 selected_year = st.sidebar.selectbox("Select Year", sorted(df["year"].unique()), key="year")
-selected_theme = st.sidebar.selectbox("Select Theme", ["Blues", "Viridis", "Plasma", "Inferno"], key="theme")
+# selected_theme = st.sidebar.selectbox("Select Theme", ["Blues", "Viridis", "Plasma", "Inferno"], key="theme")
 selected_city = st.sidebar.selectbox("Select City", sorted(df["city"].unique()), key="city")
 
 # Filtered data
