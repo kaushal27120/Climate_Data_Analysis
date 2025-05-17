@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+import numpy as np
 
 @st.cache_resource
 def load_models():
@@ -12,28 +17,85 @@ def load_models():
     ensemble = joblib.load("saved_models/ensemble.pkl")
     le = joblib.load("saved_models/label_encoder.pkl")
     scaler = joblib.load("saved_models/scaler.pkl")
+    model_scores = joblib.load("saved_models/model_scores.pkl")
     features = ["temp_c", "humidity", "pressure", "wind_cat_enc"]
-    return rf, gb, et, lr, dt, ensemble, le, scaler, features
+    return rf, gb, et, lr, dt, ensemble, le, scaler, model_scores, features
 
-rf, gb, et, lr, dt, ensemble, le, scaler, features = load_models()
+# Load everything
+rf, gb, et, lr, dt, ensemble, le, scaler, model_scores, features = load_models()
+
+# Sidebar chart switch
+chart_type = st.sidebar.radio(
+    "📈 Choose Accuracy Visualization",
+    ["Funnel Chart", "Radar Chart", "Bar Race Chart"]
+)
 
 st.title("🤖 Weather Prediction - Pretrained Ensemble")
 
-st.subheader("📊 Model Accuracy Overview")
-accs = {}
-for model_name, model in zip(
-    ["Random Forest", "Gradient Boosting", "Extra Trees", "Logistic Regression", "Decision Tree", "Voting Ensemble"],
-    [rf, gb, et, lr, dt, ensemble],
-):
-    # This assumes you saved test data or evaluate on your own offline
-    # For demo, we'll just show placeholders (replace with real accuracies if you have)
-    accs[model_name] = "Load/test accuracy offline"
+# Prepare accuracy data
+model_names = list(model_scores.keys())
+accuracies = [round(acc * 100, 2) for acc in model_scores.values()]
+df_scores = pd.DataFrame({"Model": model_names, "Accuracy": accuracies}).sort_values("Accuracy", ascending=False)
 
-acc_df = pd.DataFrame(list(accs.items()), columns=["Model", "Accuracy"])
-st.dataframe(acc_df)
+# Charts
+st.subheader("📊 Model Accuracy Comparison")
 
+if chart_type == "Funnel Chart":
+    fig = px.funnel(df_scores, x="Accuracy", y="Model", color="Model", title="Funnel Chart: Accuracy Comparison")
+    st.plotly_chart(fig, use_container_width=True)
+
+elif chart_type == "Radar Chart":
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=df_scores["Accuracy"],
+        theta=df_scores["Model"],
+        fill='toself',
+        name='Accuracy'
+    ))
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                      showlegend=False, title="Radar Chart: Accuracy Comparison")
+    st.plotly_chart(fig, use_container_width=True)
+
+elif chart_type == "Bar Race Chart":
+    fig = px.bar(df_scores, x="Accuracy", y="Model", orientation='h',
+                 title="Bar Chart Race: Accuracy by Model", color="Model", animation_frame="Model")
+    st.plotly_chart(fig, use_container_width=True)
+
+# Optional: Confusion Matrix
+st.subheader("🧪 Confusion Matrix")
+selected_model = st.selectbox("Choose model to view confusion matrix", model_names)
+model_map = {
+    "Random Forest": rf,
+    "Gradient Boosting": gb,
+    "Extra Trees": et,
+    "Logistic Regression": lr,
+    "Decision Tree": dt,
+    "Voting Ensemble": ensemble
+}
+
+if st.button("Show Confusion Matrix"):
+    # Load and prepare data again
+    df = joblib.load("processed_climate_data.csv")
+    df["temp_c"] = df["temperature"] - 273.15
+    df["wind_cat"] = pd.cut(df["wind_speed"], bins=[0,3,7,15,50], labels=["calm","breeze","windy","storm"])
+    df["wind_cat_enc"] = joblib.load("saved_models/label_encoder.pkl").fit_transform(df["wind_cat"])
+    df.dropna(inplace=True)
+    df_year = df[df["year"] == df["year"].max()].copy()
+    X = df_year[features]
+    y = joblib.load("saved_models/label_encoder.pkl").transform(df_year["weather"])
+    X_scaled = scaler.transform(X)
+
+    model = model_map[selected_model]
+    y_pred = model.predict(X_scaled)
+    cm = confusion_matrix(y, y_pred)
+    fig_cm, ax_cm = plt.subplots(figsize=(7, 5))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=le.classes_)
+    disp.plot(ax=ax_cm, cmap="Blues", colorbar=False)
+    st.pyplot(fig_cm)
+    plt.close(fig_cm)
+
+# Prediction UI
 st.subheader("🔍 Predict Weather with Voting Ensemble")
-
 with st.form("live_form"):
     col1, col2 = st.columns(2)
     with col1:

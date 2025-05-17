@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier, ExtraTreesClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 from tqdm import tqdm
 
 def feature_engineering(df):
@@ -43,6 +43,12 @@ def train_and_save():
     X_scaled = scaler.fit_transform(X)
 
     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+    # Save test data for inference/SHAP/CM
+    os.makedirs("saved_models", exist_ok=True)
+    joblib.dump((X_test, y_test), "saved_models/test_data.pkl", compress=3)
+    joblib.dump(X_train, "saved_models/X_train.pkl", compress=3)
+    joblib.dump(features, "saved_models/features.pkl", compress=3)
 
     # Model parameters
     param_grids = {
@@ -85,9 +91,9 @@ def train_and_save():
         }
     }
 
-    os.makedirs("saved_models", exist_ok=True)
     trained_models = {}
     model_scores = {}
+    conf_matrices = {}
 
     print("🚀 Training models...")
     for name in tqdm(param_grids, desc="🔄 Training models"):
@@ -99,34 +105,43 @@ def train_and_save():
 
         y_pred = best_model.predict(X_test)
         acc = accuracy_score(y_test, y_pred)
+        cm = confusion_matrix(y_test, y_pred)
+
         print(f"✅ {name} - Accuracy: {acc:.4f}, Best Params: {grid.best_params_}")
 
-        # Save model with compression
         filename = f"saved_models/{name.replace(' ', '_').lower()}.pkl"
         joblib.dump(best_model, filename, compress=9)
 
         trained_models[name] = best_model
         model_scores[name] = acc
+        conf_matrices[name] = cm
 
-    # Train ensemble
+    # Ensemble model
     print("🧠 Training Voting Ensemble...")
     ensemble = VotingClassifier(
         estimators=[(name, model) for name, model in trained_models.items()],
         voting='soft'
     )
     ensemble.fit(X_train, y_train)
-    ensemble_acc = accuracy_score(y_test, ensemble.predict(X_test))
-    model_scores["Voting Ensemble"] = ensemble_acc
+    y_ensemble = ensemble.predict(X_test)
+    acc_ensemble = accuracy_score(y_test, y_ensemble)
+    cm_ensemble = confusion_matrix(y_test, y_ensemble)
+
+    model_scores["Voting Ensemble"] = acc_ensemble
+    conf_matrices["Voting Ensemble"] = cm_ensemble
+
     joblib.dump(ensemble, "saved_models/ensemble.pkl", compress=9)
 
-    # Save encoders/scaler and scores with compression
+    # Save remaining items
     joblib.dump(le, "saved_models/label_encoder.pkl", compress=9)
     joblib.dump(scaler, "saved_models/scaler.pkl", compress=9)
     joblib.dump(model_scores, "saved_models/model_scores.pkl", compress=9)
+    joblib.dump(conf_matrices, "saved_models/conf_matrices.pkl", compress=3)
 
     print("\n🎉 All models trained and saved successfully!")
     print("📁 Models saved in 'saved_models/' directory.")
     print("📈 Accuracy scores saved to 'model_scores.pkl'")
+    print("📊 Confusion matrices saved to 'conf_matrices.pkl'")
 
 if __name__ == "__main__":
     train_and_save()
