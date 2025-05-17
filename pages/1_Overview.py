@@ -29,7 +29,7 @@ themes = {
 }
 
 selected_year = st.sidebar.selectbox("Select Year", years, key="year")
-# selected_theme = st.sidebar.selectbox("Select Theme", list(themes.keys()), key="theme")
+selected_theme = st.sidebar.selectbox("Select Theme", list(themes.keys()), key="theme")
 selected_city = st.sidebar.selectbox("Select City", cities, key="city")
 
 # Filtered data
