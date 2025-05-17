@@ -56,10 +56,10 @@ elif chart_type == "Radar Chart":
                       showlegend=False, title="Radar Chart: Accuracy Comparison")
     st.plotly_chart(fig, use_container_width=True)
 
-elif chart_type == "Bar Race Chart":
-    fig = px.bar(df_scores, x="Accuracy", y="Model", orientation='h',
-                 title="Bar Chart Race: Accuracy by Model", color="Model", animation_frame="Model")
-    st.plotly_chart(fig, use_container_width=True)
+# elif chart_type == "Bar Race Chart":
+#     fig = px.bar(df_scores, x="Accuracy", y="Model", orientation='h',
+#                  title="Bar Chart Race: Accuracy by Model", color="Model", animation_frame="Model")
+#     st.plotly_chart(fig, use_container_width=True)
 
 # Optional: Confusion Matrix
 st.subheader("🧪 Confusion Matrix")
