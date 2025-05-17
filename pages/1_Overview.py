@@ -43,16 +43,16 @@ col1.metric("🔥 Hottest City", hottest_city, f"{avg_temp.max():.2f} K")
 col2.metric("❄️ Coldest City", coldest_city, f"{avg_temp.min():.2f} K")
 col3.metric("🌆 Cities Tracked", df_year["city"].nunique())
 
-# Temp dial charts
-high_temp_pct = (df_year[df_year["temperature"] > df_year["temperature"].quantile(0.75)].shape[0] / df_year.shape[0]) * 100
-low_temp_pct = (df_year[df_year["temperature"] < df_year["temperature"].quantile(0.25)].shape[0] / df_year.shape[0]) * 100
+# Corrected Temp dial charts (filtered by selected city)
+high_temp_pct = (df_city[df_city["temperature"] > df_city["temperature"].quantile(0.75)].shape[0] / df_city.shape[0]) * 100
+low_temp_pct = (df_city[df_city["temperature"] < df_city["temperature"].quantile(0.25)].shape[0] / df_city.shape[0]) * 100
 
 col4, col5 = st.columns(2)
 with col4:
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=high_temp_pct,
-        title={'text': "High Temp Days %"},
+        title={'text': f"{selected_city} - High Temp Days %"},
         gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "green"}}
     ))
     st.plotly_chart(fig, use_container_width=True)
@@ -61,7 +61,7 @@ with col5:
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=low_temp_pct,
-        title={'text': "Low Temp Days %"},
+        title={'text': f"{selected_city} - Low Temp Days %"},
         gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "red"}}
     ))
     st.plotly_chart(fig, use_container_width=True)
