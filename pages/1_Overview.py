@@ -3,6 +3,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+import sys
+import os
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
+
 from main import load_and_prepare_data
 
 # Load data

@@ -3,6 +3,12 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+import sys
+import os
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
+
 from main import load_and_prepare_data
 
 @st.cache_data

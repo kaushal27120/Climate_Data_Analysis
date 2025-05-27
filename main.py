@@ -1,4 +1,3 @@
-# main.py
 import pandas as pd
 from functools import reduce
 import os
